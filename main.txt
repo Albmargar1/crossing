@@ -1,0 +1,470 @@
+!! Reset simulation
+finish
+/clear
+/uis, msgpop, 4 ! Avoid warning messages
+keyw,pr_sgvof,1
+/nerr, 0, 10000,, 0, 0
+/prep7 ! Init preprocessor
+keyw, pr_set, 1
+keyw, pr_struc, 1
+
+
+
+!!!!!!!!!!!!!!!!!!
+!!! Parameters !!!
+!!!!!!!!!!!!!!!!!!
+!! Constants
+*set, PI, 3.14159265
+*set, psi, 0.0
+
+!! Mechanical properties
+MP, DENS, 1, 523
+mp, ex, 1, 2e8					 
+!mp, ey, 1, 2e6
+!mp, ez, 1, 2e6
+mp, prxy, 1, 0.3
+!mp, prxz, 1, 0.0
+!mp, pryz, 1, 0.0
+!mp, gxy, 1, 1e6
+!mp, gxz, 1, 1e6
+!mp, gyz, 1, 1e6
+MP, MU, 1, 0.1
+
+!! Geometrical properties
+*set, yRadius, 1.14e-4
+*set, separationYarns, 2.0 ! times yRadius. 2.0 means that yarns are almost touching each other along width
+*set, yLengthInitial, 2.0*separationYarns*yRadius
+*set, extraLength, yLengthInitial*2.0
+
+!! Elements definition
+et, 1, solid285				!! Use solid185 if using hexahedral elements 1st order, solid186 if using hexahedral elements 2nd order, solid187 for quadratic tetahedral, solid285 for linear tetahedral
+shpp, on
+
+!!!!!!!!!!!!!!!!
+!!! Geometry !!!
+!!!!!!!!!!!!!!!!
+
+!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!* !*
+!* NOTE FOR READER: This part is a bit messy, and the error should not be located here !*
+!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!* !*
+
+
+!! Create local axis per yarn. 		X: Main direction; Y: Perpendicular to both yarns main direction; Z: Axis center
+csys, 0
+local, 11, 0, 0, yRadius, 0
+local, 21, 0, 0, -yRadius, 0, 0, 0, -(psi+PI/2)*180/PI
+
+!! Yarn 1 - Define points, segments, volume and mesh
+csys, 0
+cylind, yRadius,,-extraLength/2,extraLength/2
+cm, volu1full, volu
+cylind, yRadius,,-yLengthInitial/2,yLengthInitial/2
+cmsel, u, volu1full, volu
+cm, voluReduced, volu
+vsel, all
+csys, 5
+vgen, 2, all,,,, -90, 0,,,1
+csys, 0
+vgen, 2, 1,,,0, yRadius, 0,,,1
+vgen, 2, 2,,,0, -yRadius, 0,,,1
+
+lesize, all, yRadius/4
+!smrtsize, 4
+
+vsel, all
+vatt, 1, 1, 1
+esys, 11 
+vmesh, 1 			    ! Uncomment if using tetahedral elements
+!vsweep, 1, 1, 6 		! Uncomment if using hexahedral elements
+!vsweep, 4, 15, 16 		! Uncomment if using hexahedral elements
+!vsweep, 5, 18, 19 		! Uncomment if using hexahedral elements
+!vsweep, 6, 21, 22 		! Uncomment if using hexahedral elements
+
+*get, minNodeY1, node, 0, num, min
+*get, maxNodeY1, node, 0, num, max
+
+
+!! Rest of the yarns
+local, 50, 1, 0, 0, 0, 0, (psi+PI/2)*180/PI
+
+csys, 0
+vatt, 1, 1, 1
+cmsel, s, voluReduced, volu
+vgen, 2, all,,, 0, -2.0*yRadius, -yLengthInitial/2
+vmesh, 3
+minNodeY2 = maxNodeY1+1
+*get, maxNodeY2, node, 0, num, max
+
+cmsel, s, voluReduced, volu
+vgen, 2, all,,, 0, -2.0*yRadius, yLengthInitial/2
+vmesh, 4
+minNodeY3 = maxNodeY2+1
+*get, maxNodeY3, node, 0, num, max
+
+csys, 50
+vatt, 1, 1, 1
+esys, 21 
+cmsel, s, volu1full, volu
+vgen, 2, all,,, 0, -90, 0,,1
+cmsel, u, volu1full, volu
+csys, 0
+vgen, 2, all,,, 0, -2.0*yRadius, 0,,1,1
+vmesh, 5 			! Uncomment if using tetahedral elements
+!vsweep, 13, 52, 53 		! Uncomment if using hexahedral elements
+!vsweep, 14, 57, 54 		! Uncomment if using hexahedral elements
+!vsweep, 15, 59, 61 		! Uncomment if using hexahedral elements
+!vsweep, 16, 63, 64 		! Uncomment if using hexahedral elements
+
+minNodeY4 = maxNodeY3+1
+*get, maxNodeY4, node, 0, num, max
+vsel, s, loc, y, 0, -2.0*yRadius
+cm, volu2full, volu
+
+vatt, 1, 1, 1
+csys, 50
+cmsel, s, voluReduced, volu
+vgen, 2, all,,, 0, -90, 0,,1
+cmsel, u, voluReduced, volu
+cm, volu2Reduced, volu
+
+csys, 0
+cmsel, s, volu2Reduced, volu
+vgen, 2, all,,, yLengthInitial/2, 4.0*yRadius
+vmesh, 7 			! Uncomment if using tetahedral elements
+minNodeY5 = maxNodeY4+1
+*get, maxNodeY5, node, 0, num, max
+
+cmsel, s, volu2Reduced, volu
+vgen, 2, all,,, -yLengthInitial/2, 4.0*yRadius
+vmesh, 8 			! Uncomment if using tetahedral elements
+minNodeY6 = maxNodeY5+1
+*get, maxNodeY6, node, 0, num, max
+
+esel, all
+nsel, all
+vsel, all
+!vimp, all
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!! Group nodes and elements !!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!! Group ending nodes
+*do, iYarn, 1, 6 
+	*do, iSide, 1, 2
+        *set, sideOp, 3-2*iSide 
+		nsel, s, node,, minNodeY%iYarn%, maxNodeY%iYarn%
+
+		*if, iYarn, eq, 1, then 
+			csys, 11 
+            nsel, r, loc, x, 0.999*extraLength/2*sideOp, 1.001*extraLength/2*sideOp 
+		*elseif, iYarn, eq, 4
+			csys, 21
+            nsel, r, loc, x, 0.999*extraLength/2*sideOp, 1.001*extraLength/2*sideOp 
+        *else
+            nsel, r, loc, x, 0.999*yLengthInitial/2*sideOp, 1.001*yLengthInitial/2*sideOp 
+		*endif 
+		cm, y%iYarn%S%iSide%Nodes, node 
+	*enddo 
+*enddo 
+nsel, all  
+
+!! Create component per yarn
+csys, 0
+esel, s, cent, y, 0, 2*yRadius
+cm, y1elem, elem
+esel, s, cent, y, -2*yRadius, -4*yRadius
+esel, r, cent, z, 0, -1
+cm, y2elem, elem
+esel, s, cent, y, -2*yRadius, -4*yRadius
+esel, r, cent, z, 0, 1
+cm, y3elem, elem
+esel, s, cent, y, 0, -2*yRadius
+cm, y4elem, elem
+esel, s, cent, y, 2*yRadius, 4*yRadius
+esel, r, cent, x, 0, 1
+cm, y5elem, elem
+esel, s, cent, y, 2*yRadius, 4*yRadius
+esel, r, cent, x, 0, -1
+cm, y6elem, elem
+esel, all
+
+!! Group surfaces
+asel, s, area,, 3, 4
+cm, surface1, area
+
+asel, s, area,, 11, 12
+cm, surface2, area
+
+asel, s, area,, 15, 16
+cm, surface3, area
+
+asel, s, area,, 19, 20
+cm, surface4, area
+
+asel, s, area,, 27, 28
+cm, surface5, area
+
+asel, s, area,, 31, 32
+cm, surface6, area
+
+
+
+!!!!!!!!!!!!!!!!!!!!
+!!! Contact Pair !!!
+!!!!!!!!!!!!!!!!!!!!
+! Contact between yarns
+ET,2,CONTA174   
+KEYOPT,2,1,0
+KEYOPT,2,2,0
+KEYOPT,2,3,0
+KEYOPT,2,4,0
+KEYOPT,2,5,0
+KEYOPT,2,6,0
+KEYOPT,2,7,0
+KEYOPT,2,8,0
+KEYOPT,2,9,0
+KEYOPT,2,10,0   
+KEYOPT,2,11,0   
+KEYOPT,2,12,0   
+KEYOPT,2,13,0   
+KEYOPT,2,14,0   
+KEYOPT,2,15,0   
+KEYOPT,2,16,0 
+
+ET,3,TARGE170   
+KEYOPT,3,1,1
+KEYOPT,3,2,0
+KEYOPT,3,3,0
+KEYOPT,3,6,0
+
+
+*do, i, 1, 5
+    R,i,0,0,1.0,0.1,0,0  
+    RMORE,0,0,1e+020, 0,1,1 
+    RMORE,0,,, ,,   
+    RMORE,,,1, 0,0, 
+    RMORE,,,,,, 
+    RMORE,,,,,  
+*enddo
+
+
+! Contact 1-4
+real, 1
+cmsel, s, surface1, area
+nsla, s, 1
+esln, s
+type, 2
+esurf
+
+cmsel, s, surface4, area
+nsla, s, 1
+esln, s
+type, 3
+esurf
+
+
+! Contact 1-5
+real, 2
+cmsel, s, surface1, area
+nsla, s, 1
+esln, s
+type, 2
+esurf
+cmsel, s, surface5, area
+nsla, s, 1
+esln, s
+type, 3
+esurf
+
+
+! Contact 1-6
+real, 3
+cmsel, s, surface1, area
+nsla, s, 1
+esln, s
+type, 2
+esurf
+cmsel, s, surface6, area
+nsla, s, 1
+esln, s
+type, 3
+esurf
+
+
+! Contact 4-2
+real, 4
+cmsel, s, surface4, area
+nsla, s, 1
+esln, s
+type, 2
+esurf
+cmsel, s, surface2, area
+nsla, s, 1
+esln, s
+type, 3
+esurf
+
+
+! Contact 4-3
+real, 5
+cmsel, s, surface4, area
+nsla, s, 1
+esln, s
+type, 2
+esurf
+cmsel, s, surface3, area
+nsla, s, 1
+esln, s
+type, 3
+esurf   
+
+
+
+!!!!!!!!!!!!!!
+!!! Render !!!
+!!!!!!!!!!!!!!
+esel, all
+nsel, all
+eplot
+! Translucency
+/trlcy, elem, 0.0, all
+! Elements color
+cmsel, s, y1elem, elem
+/color, elem, blue, all
+cmsel, s, y2elem, elem
+/color, elem, cblu, all
+cmsel, s, y3elem, elem
+/color, elem, cblu, all
+cmsel, s, y4elem, elem
+/color, elem, red, all
+cmsel, s, y5elem, elem
+/color, elem, mred, all
+cmsel, s, y6elem, elem
+/color, elem, mred, all
+esel, all
+! Elements edge color
+/color, outl, dgra
+! Hide labels
+/triad, off
+/psymb, cs, 0
+/replot
+
+
+!!!!!!!!!!!!!!!!
+!!! Solution !!!
+!!!!!!!!!!!!!!!!
+finish
+/solu
+antype, static
+
+!! Loads
+csys, 0
+
+! Yarn 1
+cmsel, s, y1S1Nodes, node 
+D, all, uy, 0,,,, uz
+*get, nodeCount, node,, count
+*do, i, 1, nodeCount-1, 1
+    *get, nodeMin, node,, num, min
+    nsel, u, node,, nodeMin
+    *get, nodeNext, node,, num, min
+    ce, next, 0, nodeMin, ux, 1, nodeNext, ux, -1
+*enddo
+
+cmsel, s, y1S2Nodes, node 
+D, all, uy, 0,,,, uz
+*get, nodeCount, node,, count
+*do, i, 1, nodeCount-1, 1
+    *get, nodeMin, node,, num, min
+    nsel, u, node,, nodeMin
+    *get, nodeNext, node,, num, min
+    ce, next, 0, nodeMin, ux, 1, nodeNext, ux, -1
+*enddo
+
+! Yarn 2
+cmsel, s, y2S1Nodes, node 
+D, all, ux, 0,,,, uz
+D, all, uy, 4.0*yRadius
+
+cmsel, s, y2S2Nodes, node 
+D, all, ux, 0,,,, uz
+D, all, uy, 4.0*yRadius
+
+! Yarn 3
+cmsel, s, y3S1Nodes, node 
+D, all, ux, 0,,,, uz
+D, all, uy, 4.0*yRadius
+
+cmsel, s, y3S2Nodes, node 
+D, all, ux, 0,,,, uz
+D, all, uy, 4.0*yRadius
+
+! Yarn 4
+cmsel, s, y4S1Nodes, node 
+D, all, ux, 0,,,, uy
+*get, nodeCount, node,, count
+*do, i, 1, nodeCount-1, 1
+    *get, nodeMin, node,, num, min
+    nsel, u, node,, nodeMin
+    *get, nodeNext, node,, num, min
+    ce, next, 0, nodeMin, uz, 1, nodeNext, uz, -1
+*enddo
+
+cmsel, s, y4S2Nodes, node 
+D, all, ux, 0,,,, uy
+*get, nodeCount, node,, count
+*do, i, 1, nodeCount-1, 1
+    *get, nodeMin, node,, num, min
+    nsel, u, node,, nodeMin
+    *get, nodeNext, node,, num, min
+    ce, next, 0, nodeMin, uz, 1, nodeNext, uz, -1
+*enddo
+
+! Yarn 5
+cmsel, s, y5S1Nodes, node 
+D, all, ux, 0,,,, uz
+D, all, uy, -4.0*yRadius
+
+cmsel, s, y5S2Nodes, node 
+D, all, ux, 0,,,, uz
+D, all, uy, -4.0*yRadius
+
+
+! Yarn 6
+cmsel, s, y6S1Nodes, node 
+D, all, ux, 0,,,, uz
+D, all, uy, -4.0*yRadius
+
+cmsel, s, y6S2Nodes, node 
+D, all, ux, 0,,,, uz
+D, all, uy, -4.0*yRadius
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!
+!!! Solution options !!!
+!!!!!!!!!!!!!!!!!!!!!!!!
+nsel, all
+esel, all
+nlgeom, on
+lnsrch, on
+!arclen, on
+nldiag, nrre, on
+!nldiag, eflg, on
+!nldiag, cont, on
+!autots, on
+nsubst, 10, 30, 5
+!eqslv, pcg
+!nropt, full
+!stabilize, constant, energy, 2e-1
+!time, 1
+!outpr, basic, last 
+solve
+!save, test, db
+
+! Update geom
+!finish
+!/prep7
+!upgeom,,,,Test,rst
